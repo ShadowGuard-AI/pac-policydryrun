@@ -121,6 +121,9 @@ def validate_policy(policy_data, schema_file):
       return True
 
   try:
+      # The schema is always loaded as JSON, whatever --format says.
+      # The format flag governs the policy and environment files only,
+      # so a YAML schema is a parse error here, not a choice I offer.
       schema_data = load_data(schema_file, 'json')
       validate(instance=policy_data, schema=schema_data)
       logging.info("Policy validation successful.")
@@ -167,6 +170,10 @@ def evaluate_policy(policy_data, environment_data):
         resource_type = policy_data['resource_must_exist']['type']
         resource_name = policy_data['resource_must_exist']['name']
 
+        # Name matching is exact and case sensitive, and the id field
+        # is never looked at. A resource present under a differently
+        # cased name is reported missing, and a same named placeholder
+        # of the wrong kind still counts as existing.
         resource_found = False
         for resource in environment_data.get(resource_type, []):
             if resource.get('name') == resource_name:
@@ -201,6 +208,10 @@ def main():
                 logging.error("Policy validation failed. Exiting.")
                 sys.exit(1)
 
+        # This guard only fires for a dict policy. A policy file that
+        # parses to a list slips past it and fails later inside
+        # evaluate_policy with a type error, which the broad handler
+        # below turns into the same exit 1 with a less clear message.
         if isinstance(policy_data, dict) and 'resource_must_exist' not in policy_data:
             print("Not checked: no supported policy rules found. Only the resource_must_exist check is implemented, and the policy holds no such rule.")
             logging.error("No supported policy rules found, so no checks ran.")

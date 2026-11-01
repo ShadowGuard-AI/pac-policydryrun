@@ -19,7 +19,7 @@ def setup_argparse():
         argparse.ArgumentParser: The configured argument parser.
     """
     parser = argparse.ArgumentParser(
-        description="pac-PolicyDryRun: Simulates policy execution against a provided environment."
+        description="pac-PolicyDryRun: Checks whether a resource named by a resource_must_exist rule in a local policy file exists in a local environment file. Nothing is fetched and nothing is changed."
     )
 
     parser.add_argument(
@@ -201,6 +201,11 @@ def main():
                 logging.error("Policy validation failed. Exiting.")
                 sys.exit(1)
 
+        if isinstance(policy_data, dict) and 'resource_must_exist' not in policy_data:
+            print("Not checked: no supported policy rules found. Only the resource_must_exist check is implemented, and the policy holds no such rule.")
+            logging.error("No supported policy rules found, so no checks ran.")
+            sys.exit(1)
+
         findings = evaluate_policy(policy_data, environment_data)
 
         if findings:
@@ -208,6 +213,7 @@ def main():
             for finding in findings:
                 print(f"  - {finding}")
             logging.warning("Policy violations found.")
+            sys.exit(1)
         else:
             print("No policy violations found.")
             logging.info("No policy violations found.")
